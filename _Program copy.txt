@@ -1,0 +1,79 @@
+using Microsoft.EntityFrameworkCore;
+using Vms;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<M3sDb>(opt => opt.UseInMemoryDatabase("UserList"));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+// Add services to the container.
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+var summaries = new[]
+{
+    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+};
+
+app.MapGet("/weatherforecast", () =>
+{
+    var forecast =  Enumerable.Range(1, 5).Select(index =>
+        new WeatherForecast
+        (
+            DateTime.Now.AddDays(index),
+            Random.Shared.Next(-20, 55),
+            summaries[Random.Shared.Next(summaries.Length)]
+        ))
+        .ToArray();
+    return forecast;
+})
+.WithName("GetWeatherForecast");
+
+app.MapGet("/",() =>
+{
+    return "This is the root url";
+});
+
+
+app.MapGet("/home", () => "Hello world");
+
+app.MapGet("/users",async (M3sDb db)=>{
+    return await db.Users.ToListAsync();
+});
+
+app.MapGet("/add", async(M3sDb db) =>{
+    User user = new User{Id =2, Name="Kiran raj sharma"};
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
+    return "User successfully added";
+});
+
+app.MapGet("/addUsr/{id}/{name}", async(M3sDb db, int id, string name) => {
+    User user = new User{Id = id, Name=name};
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
+    return Results.Created($"/users/1", user);    
+} );
+
+
+app.MapGet("/users/{id}", async (M3sDb db)=> await db.Users.ToListAsync());
+
+app.MapPost("/post",()=> "post method");
+
+
+app.Run();
+
+record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
+{
+    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
